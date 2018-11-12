@@ -39,35 +39,35 @@ public class Main {
             .get("hello", ctx -> {
               //ctx.render("Hello!");
               RelativisticModel.select();
-              Amount<Mass> m = Amount.valueOf("12 GeV").to(KILOGRAM);
-              ctx.render("E=mc^2: 12 GeV = " + m.toString());
+              String energy = System.getenv("ENERGY");
+              Amount<Mass> m = Amount.valueOf(energy).to(KILOGRAM);
+              ctx.render("E=mc^2: "+energy + m.toString());
             })
+                .get("db", ctx -> {
+                    Blocking.get(() -> {
+                        try (Connection connection = ctx.get(DataSource.class).getConnection()) {
+                            Statement stmt = connection.createStatement();
+                            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS ticks (tick timestamp)");
+                            stmt.executeUpdate("INSERT INTO ticks VALUES (now())");
+                            ResultSet rs = stmt.executeQuery("SELECT tick FROM ticks");
 
-            .get("db", ctx -> {
-              Blocking.get(() -> {
-                try (Connection connection = ctx.get(DataSource.class).getConnection()) {
-                  Statement stmt = connection.createStatement();
-                  stmt.executeUpdate("CREATE TABLE IF NOT EXISTS ticks (tick timestamp)");
-                  stmt.executeUpdate("INSERT INTO ticks VALUES (now())");
-                  ResultSet rs = stmt.executeQuery("SELECT tick FROM ticks");
+                            ArrayList<String> output = new ArrayList<>();
+                            while (rs.next()) {
+                                output.add("Read from DB: " + rs.getTimestamp("tick"));
+                            }
+                            Map<String, Object> attributes = new HashMap<>();
+                            attributes.put("results", output);
 
-                  ArrayList<String> output = new ArrayList<>();
-                  while (rs.next()) {
-                    output.add("Read from DB: " + rs.getTimestamp("tick"));
-                  }
-                  Map<String, Object> attributes = new HashMap<>();
-                  attributes.put("results", output);
-
-                  return attributes;
-                }
-              }).onError(throwable -> {
-                Map<String, Object> attributes = new HashMap<>();
-                attributes.put("message", "There was an error: " + throwable);
-                ctx.render(groovyTemplate(attributes, "error.html"));
-              }).then(attributes -> {
-                ctx.render(groovyTemplate(attributes, "db.html"));
-              });
-            })
+                            return attributes;
+                        }
+                    }).onError(throwable -> {
+                        Map<String, Object> attributes = new HashMap<>();
+                        attributes.put("message", "There was an error: " + throwable);
+                        ctx.render(groovyTemplate(attributes, "error.html"));
+                    }).then(attributes -> {
+                        ctx.render(groovyTemplate(attributes, "db.html"));
+                    });
+                })
 
             .files(f -> f.dir("public"))
         )
