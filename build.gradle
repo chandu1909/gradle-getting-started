@@ -13,6 +13,9 @@ dependencies {
   compile ratpack.dependency("hikari")
   compile "org.postgresql:postgresql:42.2.2"
   testCompile 'junit:junit:4.12'
+  compile('org.jscience:jscience:4.3.1'){
+    exclude group: 'org.javolution',module:'javolution'
+  }
 }
 
 task stage {
